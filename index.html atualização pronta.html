@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master ID - Dark Edition</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        :root {
+            --bg-body: #000000;
+            --bg-card: #111827;
+            --primary: #1e3a8a;
+            --accent: #2563eb;
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --border: #1f2937;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: 90px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(180deg, var(--primary) 0%, #0f172a 100%);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+        header h1 { margin: 0; font-size: 1.3rem; letter-spacing: 1px; }
+
+        .nav-container {
+            background: var(--bg-card);
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            z-index: 100;
+            border-top: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        .btn-nav {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 15px 5px;
+            font-weight: bold;
+            flex: 1;
+            font-size: 0.85rem;
+        }
+
+        .btn-nav.active {
+            color: var(--accent);
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        .screen { display: none; padding: 20px 15px; max-width: 600px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+        .screen.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card {
+            background: var(--bg-card);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], input[type="file"] {
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            background: #000; border: 1px solid var(--border);
+            color: white; border-radius: 8px; box-sizing: border-box;
+        }
+
+        button { width: 100%; cursor: pointer; border-radius: 8px; border: none; font-weight: bold;}
+        .btn-main { background: var(--accent); color: white; padding: 15px; font-size: 1rem; }
+        .btn-small { width: auto; padding: 8px 15px; font-size: 0.85rem; }
+        .btn-action-dark { background: #334155; color: white; }
+        .btn-delete { background: rgba(220, 38, 38, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+
+        .qr-box-center { display:flex; justify-content:center; margin: 20px 0; padding: 10px; background: white; border-radius: 8px; width: fit-content; margin-left: auto; margin-right: auto; }
+        .new-id-photo { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--accent); object-fit: cover; }
+
+        #reader { border-radius: 12px; overflow: hidden; border: 2px solid var(--border); background: #000; margin: 15px 0; }
+        .scan-buttons { display: flex; gap: 10px; }
+        .scan-buttons button { flex: 1; }
+
+        .status-box { padding: 20px; border-radius: 12px; text-align: center; display: none; margin-top: 20px; }
+        .status-authorized { background: rgba(22, 163, 74, 0.1); border: 2px solid var(--success); color: var(--success); }
+        .status-denied { background: rgba(220, 38, 38, 0.1); border: 2px solid var(--danger); color: var(--danger); }
+
+        /* Calendario */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+        .weekday { color: var(--text-muted); font-size: 0.8rem; }
+        .day-cell { padding: 10px 5px; background: #0a0a0a; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; }
+        .day-cell.has-records { border: 1px solid var(--accent); background: rgba(37, 99, 235, 0.1); color: white; }
+        .badge { background: var(--accent); color: white; font-size: 0.6rem; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: 4px; }
+
+        .action-row { display: flex; gap: 10px; margin-top: 15px; }
+        .action-row button { flex: 1; }
+        .restore-area { margin-top:15px; border-top:1px solid var(--border); padding-top:15px; }
+
+        .id-card-item { background: #0a0a0a; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .id-card-item img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; }
+
+        /* --- BOTÃO BRILHANTE DE DOWNLOAD --- */
+        .btn-shiny {
+            background: linear-gradient(45deg, #00ff87, #60efff);
+            color: #000000;
+            font-weight: 900;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            padding: 20px;
+            border: none;
+            border-radius: 50px;
+            margin-top: 15px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+            transition: 0.3s;
+            animation: pulse 2s infinite;
+            width: 100%;
+            display: block; /* Garante que apareça */
+        }
+
+        .btn-shiny:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.9);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(96, 239, 255, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(96, 239, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(96, 239, 255, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>MASTER ID <span style="color:var(--accent)">DARK</span></h1>
+    </header>
+
+    <div id="create" class="screen active">
+        <div class="card">
+            <h3>📝 Novo Registro</h3>
+            <label>Nome Completo</label>
+            <input type="text" id="inName" placeholder="Ex: João Silva">
+            
+            <label>Cargo / Função</label>
+            <input type="text" id="inRole" placeholder="Ex: Segurança">
+            
+            <label>Foto de Perfil</label>
+            <input type="file" id="inPhoto" accept="image/*">
+            
+            <button class="btn-main" onclick="addProfile()">GERAR QR CODE</button>
+        </div>
+
+        <div id="newlyCreatedResult" class="card" style="display:none;">
+            <h3 style="color:var(--accent)">ID Criado com Sucesso!</h3>
+            <div id="newIdContent"></div>
+            <div id="newQrDisplay" class="qr-box-center"></div>
+            
+            <button id="btnDownloadQR" class="btn-shiny">BAIXAR QR CODE</button>
+            
+            <p style="text-align:center"><small style="color:var(--text-muted)">Este QR Code já está ativo.</small></p>
+        </div>
+    </div>
+
+    <div id="scan" class="screen">
+        <div class="card">
+            <h3>🔍 Validador</h3>
+            <div class="scan-buttons">
+                <button class="btn-small btn-main" onclick="startCam()">📷 Câmera</button>
+                <button class="btn-small btn-action-dark" onclick="document.getElementById('scanFile').click()">📁 Arquivo</button>
+            </div>
+            <input type="file" id="scanFile" accept="image/*" style="display:none" onchange="scanFromFile(this)">
+            
+            <div id="reader"></div>
+            <button id="stopBtn" class="btn-small btn-delete" style="display:none; width:100%" onclick="stopCam()">Parar Câmera</button>
+        </div>
+
+        <div id="scanResult" class="status-box"></div>
+    </div>
+
+    <div id="calendar" class="screen">
+        <div class="card">
+            <div class="calendar-header">
+                <button class="btn-small btn-action-dark" onclick="changeMonth(-1)">◀</button>
+                <h3 id="monthYearLabel">Mês Ano</h3>
+                <button class="btn-small btn-action-dark" onclick="changeMonth(1)">▶</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+        <div class="card" id="dayDetails" style="display:none;">
+            <h4 id="detailsTitle" style="color:var(--accent)">Presença: </h4>
+            <div id="attendanceList"></div>
+        </div>
+    </div>
+
+    <div id="list" class="screen">
+        <div class="card">
+            <h3>Base de Dados</h3>
+            <p style="color:var(--text-muted)">Usuários: <b style="color:white" id="totalUsers">0</b> | Presenças: <b style="color:white" id="totalAtt">0</b></p>
+            
+            <div class="action-row">
+                <button class="btn-small btn-action-dark" onclick="downloadBackup()">⬇️ Backup</button>
+                <button class="btn-small btn-delete" onclick="wipeAll()">🗑️ Zerar</button>
+            </div>
+            
+            <div class="restore-area">
+                <label>Restaurar Backup (.json):</label>
+                <input type="file" accept=".json" onchange="loadBackup(this)">
+            </div>
+        </div>
+        <div id="usersListContainer"></div>
+    </div>
+
+    <div class="nav-container">
+        <button class="btn-nav active" onclick="nav('create')">Criar</button>
+        <button class="btn-nav" onclick="nav('scan')">Scanner</button>
+        <button class="btn-nav" onclick="nav('calendar')">Calendário</button>
+        <button class="btn-nav" onclick="nav('list')">Lista</button>
+    </div>
+
+    <script>
+        // --- DADOS E VARIÁVEIS GLOBAIS ---
+        let usersDB = JSON.parse(localStorage.getItem('master_users_v6')) || [];
+        let attendanceDB = JSON.parse(localStorage.getItem('master_attendance_v6')) || {};
+        let html5QrCode = new Html5Qrcode("reader");
+        let isScanning = false;
+        let currentCalendarDate = new Date();
+
+        // --- FUNÇÃO DE SALVAR ---
+        function saveAll() {
+            try {
+                localStorage.setItem('master_users_v6', JSON.stringify(usersDB));
+                localStorage.setItem('master_attendance_v6', JSON.stringify(attendanceDB));
+                renderStats();
+            } catch(e) {
+                alert("Memória cheia! Use fotos menores.");
+            }
+        }
+
+        // --- NAVEGAÇÃO ---
+        function nav(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
+            
+            document.getElementById(id).classList.add('active');
+            
+            const btns = document.querySelectorAll('.btn-nav');
+            if(id === 'create') btns[0].classList.add('active');
+            if(id === 'scan') btns[1].classList.add('active');
+            if(id === 'calendar') { btns[2].classList.add('active'); renderCalendar(); }
+            if(id === 'list') { btns[3].classList.add('active'); renderUsersList(); }
+            
+            if(id !== 'scan') stopCam();
+            if(id !== 'create') document.getElementById('newlyCreatedResult').style.display = 'none';
+        }
+
+        // --- FUNÇÕES DE CRIAÇÃO (ADD PROFILE) ---
+        function addProfile() {
+            const name = document.getElementById('inName').value;
+            const role = document.getElementById('inRole').value;
+            const file = document.getElementById('inPhoto').files[0];
+
+            if(!name || !role || !file) {
+                alert("Por favor, preencha nome, cargo e escolha uma foto.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const max = 200; 
+                    let w = img.width, h = img.height;
+                    if(w > h){ h *= max/w; w = max; } else { w *= max/h; h = max; }
+                    canvas.width = w; canvas.height = h;
+                    ctx.drawImage(img, 0, 0, w, h);
+                    
+                    const finalImg = canvas.toDataURL('image/jpeg', 0.8);
+                    const id = 'ID-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                    
+                    const newUser = { id: id, name: name, role: role, photo: finalImg };
+                    usersDB.push(newUser);
+                    saveAll();
+                    
+                    showCreatedResult(newUser);
+
+                    document.getElementById('inName').value = "";
+                    document.getElementById('inRole').value = "";
+                    document.getElementById('inPhoto').value = "";
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function showCreatedResult(user) {
+            const resultBox = document.getElementById('newlyCreatedResult');
+            const contentBox = document.getElementById('newIdContent');
+            const qrBox = document.getElementById('newQrDisplay');
+            const btnDownload = document.getElementById('btnDownloadQR');
+
+            contentBox.innerHTML = `
+                <div style="text-align:center">
+                    <img src="${user.photo}" class="new-id-photo">
+                    <h2 style="margin:10px 0 5px 0">${user.name}</h2>
+                    <p style="color:var(--accent); margin:0">${user.role}</p>
+                    <small style="color:var(--text-muted)">ID: ${user.id}</small>
+                </div>
+            `;
+
+            qrBox.innerHTML = "";
+            
+            // Gera o QR Code
+            new QRCode(qrBox, {
+                text: user.id,
+                width: 150,
+                height: 150,
+                colorDark : "#000000",
+                colorLight : "#ffffff"
+            });
+            
+            // --- LÓGICA DE DOWNLOAD CORRIGIDA ---
+            // Espera 500ms para garantir que o QR foi desenhado
+            setTimeout(() => {
+                btnDownload.onclick = function() {
+                    // Tenta encontrar uma imagem (alguns browsers)
+                    const img = qrBox.querySelector('img');
+                    // Tenta encontrar um canvas (outros browsers)
+                    const canvas = qrBox.querySelector('canvas');
+
+                    let url = "";
+
+                    if(img && img.src) {
+                        url = img.src;
+                    } else if(canvas) {
+                        url = canvas.toDataURL("image/png");
+                    }
+
+                    if(url) {
+                        const link = document.createElement('a');
+                        link.href = url;
+                        // Nome do arquivo limpo (sem espaços)
+                        const cleanName = user.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                        link.download = `QR_${cleanName}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    } else {
+                        alert("Erro ao gerar imagem para download. Tente novamente.");
+                    }
+                };
+            }, 500);
+
+            resultBox.style.display = 'block';
+            setTimeout(() => resultBox.scrollIntoView({behavior: "smooth"}), 100);
+        }
+
+        // --- FUNÇÕES DO SCANNER ---
+        function startCam() {
+            document.getElementById('scanResult').style.display = 'none';
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+            (decodedText) => {
+                html5QrCode.pause(); 
+                processScan(decodedText);
+            })
+            .then(() => {
+                isScanning = true; 
+                document.getElementById('stopBtn').style.display = 'block';
+            })
+            .catch((err) => {
+                alert("Erro ao abrir câmera. Use o botão 'Arquivo' se necessário.");
+            });
+        }
+
+        function stopCam() {
+            if(isScanning) {
+                html5QrCode.stop().then(() => {
+                    isScanning = false; 
+                    document.getElementById('stopBtn').style.display = 'none'; 
+                    html5QrCode.clear(); 
+                }).catch(err => console.log(err));
+            }
+        }
+
+        function scanFromFile(input) {
+            if(!input.files[0]) return;
+            html5QrCode.scanFile(input.files[0], true)
+            .then(decodedText => { processScan(decodedText); })
+            .catch(err => { alert("QR Code não encontrado na imagem."); });
+        }
+
+        function processScan(decodedText) {
+            const user = usersDB.find(u => u.id === decodedText);
+            const box = document.getElementById('scanResult');
+            box.style.display = 'block';
+
+            if(user) {
+                box.className = 'status-box status-authorized';
+                box.innerHTML = `
+                    <img src="${user.photo}" style="width:80px; height:80px; border-radius:50%; border:3px solid var(--success)">
+                    <h2 style="margin:5px 0; color:var(--success)">AUTORIZADO</h2>
+                    <h3 style="margin:0">${user.name}</h3>
+                    <p style="color:var(--text-muted)">${user.role}</p>
+                    <button class="btn-main" style="margin-top:15px; background:var(--success)" onclick="registerEntry('${user.id}')">✅ Confirmar Presença</button>
+                `;
+            } else {
+                box.className = 'status-box status-denied';
+                box.innerHTML = `<h2>❌ NÃO ENCONTRADO</h2><p>${decodedText}</p>`;
+            }
+        }
+
+        function registerEntry(userId) {
+            const user = usersDB.find(u => u.id === userId);
+            const today = new Date().toLocaleDateString('pt-BR');
+            const time = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+
+            if(!attendanceDB[today]) attendanceDB[today] = [];
+            if(attendanceDB[today].find(r => r.id === userId)) {
+                alert("Presença já marcada hoje!"); return;
+            }
+
+            attendanceDB[today].push({ id: user.id, name: user.name, photo: user.photo, time: time });
+            saveAll();
+            alert(`Entrada de ${user.name} registrada!`);
+            document.getElementById('scanResult').style.display = 'none';
+            if(isScanning) html5QrCode.resume();
+        }
+
+        // --- CALENDÁRIO ---
+        function changeMonth(d) { currentCalendarDate.setMonth(currentCalendarDate.getMonth() + d); renderCalendar(); }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid'); 
+            grid.innerHTML = '';
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            document.getElementById('monthYearLabel').innerText = `${monthNames[month]} ${year}`;
+            ["D", "S", "T", "Q", "Q", "S", "S"].forEach(d => grid.innerHTML += `<div class="weekday">${d}</div>`);
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            for(let i=0; i<firstDay; i++) grid.innerHTML += `<div></div>`;
+            for(let day=1; day<=daysInMonth; day++) {
+                const dateStr = new Date(year, month, day).toLocaleDateString('pt-BR');
+                const count = attendanceDB[dateStr] ? attendanceDB[dateStr].length : 0;
+                const div = document.createElement('div'); div.className = 'day-cell';
+                if(count > 0) div.classList.add('has-records');
+                div.innerHTML = `<span>${day}</span>` + (count > 0 ? `<div class="badge">${count}</div>` : '');
+                div.onclick = () => showAttendanceDetails(dateStr); 
+                grid.appendChild(div);
+            }
+            document.getElementById('dayDetails').style.display = 'none';
+        }
+
+        function showAttendanceDetails(dateStr) {
+            const listDiv = document.getElementById('attendanceList');
+            document.getElementById('dayDetails').style.display = 'block';
+            document.getElementById('detailsTitle').innerText = `Presença em ${dateStr}:`;
+            listDiv.innerHTML = '';
+            const records = attendanceDB[dateStr] || [];
+            if(records.length === 0) { listDiv.innerHTML = '<p style="text-align:center; color:var(--text-muted)">Nenhum registro.</p>'; return; }
+            records.forEach(rec => {
+                listDiv.innerHTML += `
+                    <div class="attendance-item" style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #333">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <img src="${rec.photo}" style="width:40px; height:40px; border-radius:50%; border:2px solid #444">
+                            <strong style="color:white">${rec.name}</strong>
+                        </div>
+                        <span style="background:#333; padding:3px 8px; border-radius:4px; font-size:0.8rem; color:#ccc">${rec.time}</span>
+                    </div>`;
+            });
+        }
+
+        // --- LISTA E BACKUP ---
+        function renderUsersList() {
+            renderStats();
+            const c = document.getElementById('usersListContainer'); c.innerHTML = '';
+            if(usersDB.length === 0) { c.innerHTML = "<p style='text-align:center; color:var(--text-muted)'>Vazio.</p>"; return; }
+            usersDB.forEach((u, idx) => {
+                const qrid = 'qrlist-'+idx;
+                const div = document.createElement('div'); div.className = 'id-card-item';
+                div.innerHTML = `
+                    <img src="${u.photo}">
+                    <div class="id-info" style="flex:1"><b style="color:white">${u.name}</b><br><small style="color:#888">${u.role}</small></div>
+                    <div id="${qrid}" style="background:white; padding:5px; border-radius:5px;"></div>
+                    <button class="btn-small btn-delete" style="width:auto; margin-left:10px" onclick="delItem(${idx})">X</button>
+                `;
+                c.appendChild(div);
+                new QRCode(document.getElementById(qrid), {text:u.id, width:40, height:40});
+            });
+        }
+
+        function delItem(i) { if(confirm("Excluir?")) { usersDB.splice(i, 1); saveAll(); renderUsersList(); } }
+        function renderStats() {
+            document.getElementById('totalUsers').innerText = usersDB.length;
+            let total = 0; Object.values(attendanceDB).forEach(a => total += a.length);
+            document.getElementById('totalAtt').innerText = total;
+        }
+        function downloadBackup() {
+            const data = JSON.stringify({ u: usersDB, a: attendanceDB });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], {type: "application/json"}));
+            a.download = "backup_ids.json"; a.click();
+        }
+        function loadBackup(input) {
+            const f = input.files[0]; if(!f) return;
+            const r = new FileReader();
+            r.onload = function(e) {
+                try {
+                    const d = JSON.parse(e.target.result);
+                    if(d.u && d.a) { usersDB = d.u; attendanceDB = d.a; saveAll(); alert("Restaurado!"); nav('list'); }
+                } catch(e) { alert("Erro no arquivo."); }
+            }
+            r.readAsText(f);
+        }
+        function wipeAll() { if(confirm("Apagar TUDO?")) { localStorage.clear(); location.reload(); } }
+
+        // Início
+        renderStats();
+    </script>
+</body>
+</html>
